@@ -220,7 +220,6 @@ else:
 
 ## Submit the pipeline to be run ##
 # Finally, we submit the pipeline for execution #
-experiment = Experiment(ws, 'seer')
-pipeline_run = experiment.submit(endpoint)
+pipeline_run = endpoint.submit('seer')                               
 pipeline_run.set_tags(tags={'universalPackageVersion': packageversion})
 print(f'Run created with ID: {pipeline_run.id}')
