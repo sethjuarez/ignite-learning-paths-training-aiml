@@ -201,18 +201,11 @@ registerStep = PythonScriptStep(
 
 pipeline = Pipeline(workspace=ws, steps=[prepStep, trainStep, registerStep])
 
-#published_pipeline = pipeline.publish(
-#    name="Seer Pipeline", 
-#    description="Transfer learned image classifier. Uses folders as labels.")
-
-#print("Newly published pipeline id: {}".format(published_pipeline.id))
-
 ## Create Pipeline Endpoint ##
 # Check if endpoint exists, otherwise create new one #
 endpoint_name = "seer-endpoint"
 endpoint_list = [p.name for p in PipelineEndpoint.list(ws)]
 endpoint = None
-
 # endpoint does not exist so add
 if endpoint_name in endpoint_list:
     endpoint = endpoint_list[0]
@@ -220,7 +213,6 @@ if endpoint_name in endpoint_list:
 else:
     endpoint = PipelineEndpoint.publish(workspace=ws, name=endpoint_name,
                                             pipeline=pipeline, description="Seer Pipeline Endpoint")
-
 
 ## Submit the pipeline to be run ##
 # Finally, we submit the pipeline for execution #
