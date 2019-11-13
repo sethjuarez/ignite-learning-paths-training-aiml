@@ -208,7 +208,7 @@ endpoint_list = [p.name for p in PipelineEndpoint.list(ws)]
 endpoint = None
 # endpoint does not exist so add
 if endpoint_name in endpoint_list:
-    endpoint = endpoint_list[0]
+    endpoint = PipelineEndpoint.get(workspace=ws, name=endpoint_name)
     endpoint.add_default(pipeline)
 else:
     endpoint = PipelineEndpoint.publish(workspace=ws, name=endpoint_name,
