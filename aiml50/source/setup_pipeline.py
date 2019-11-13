@@ -6,7 +6,7 @@ from azureml.data.datapath import DataPath, DataPathComputeBinding
 from azureml.data.data_reference import DataReference
 from azureml.core.compute import ComputeTarget, AmlCompute
 from azureml.core.compute_target import ComputeTargetException
-from azureml.pipeline.core import Pipeline, PipelineData, PipelineParameter
+from azureml.pipeline.core import Pipeline, PipelineData, PipelineParameter, PipelineEndpoint
 from azureml.pipeline.steps import PythonScriptStep, EstimatorStep
 from azureml.train.estimator import Estimator
 import sys, getopt, os
@@ -201,12 +201,28 @@ registerStep = PythonScriptStep(
 
 pipeline = Pipeline(workspace=ws, steps=[prepStep, trainStep, registerStep])
 
-published_pipeline = pipeline.publish(
-    name="Seer Pipeline", 
-    description="Transfer learned image classifier. Uses folders as labels.")
+#published_pipeline = pipeline.publish(
+#    name="Seer Pipeline", 
+#    description="Transfer learned image classifier. Uses folders as labels.")
+
+#print("Newly published pipeline id: {}".format(published_pipeline.id))
+
+## Create Pipeline Endpoint ##
+# Check if endpoint exists, otherwise create new one #
+endpoint_name = "seer-endpoint"
+endpoint_list = [p.name for p in PipelineEndpoint.list(ws)]
+endpoint = None
+
+# endpoint does not exist so add
+if endpoint_name in endpoint_list:
+    endpoint = endpoint_list[0]
+    endpoint.add_default(pipeline)
+else:
+    endpoint = PipelineEndpoint.publish(workspace=ws, name=endpoint_name,
+                                            pipeline=pipeline, description="Seer Pipeline Endpoint")
+
 
 ## Submit the pipeline to be run ##
 # Finally, we submit the pipeline for execution #
-
-pipeline_run = Experiment(ws, 'seer',).submit(published_pipeline, tags={'universalPackageVersion': packageversion})
+pipeline_run = Experiment(ws, 'seer',).submit(endpoint, tags={'universalPackageVersion': packageversion})
 print('Run created with ID: ', pipeline_run.id)

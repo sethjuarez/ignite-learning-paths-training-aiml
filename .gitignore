@@ -331,3 +331,5 @@ ASALocalRun/
 
 # Mac image previews
 .DS_Store
+
+config.json
