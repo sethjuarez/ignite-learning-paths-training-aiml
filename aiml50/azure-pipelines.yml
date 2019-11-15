@@ -63,7 +63,7 @@ steps:
       cd aiml50/source
       az artifacts universal publish \
         --organization "https://dev.azure.com/$(org_name)/" \
-        --feed "Connect to IgniteTourPackages" \
+        --feed "MITT" \
         --name "seer_deployment" \
         --version "$(Build.BuildNumber)" \
         --description "Seer files" \
