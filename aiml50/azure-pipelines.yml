@@ -47,7 +47,7 @@ steps:
   inputs:
     SourceFolder: '$(Build.Repository.LocalPath)/aiml50/source/'
     Contents: |
-      deploymentconfig.json
+      deployconfig.json
       inferenceconfig.json
       score.py
       seer_scoring.yml
