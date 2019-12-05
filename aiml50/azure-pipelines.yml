@@ -70,5 +70,5 @@ steps:
         --feed "MITT" \
         --name "seer_deployment" \
         --version "$(Build.BuildNumber)" \
-        --description "Seer files" \
-        --path .
+        --description "Seer inference files" \
+        --path $(Build.ArtifactStagingDirectory)
