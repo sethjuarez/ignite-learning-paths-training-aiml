@@ -65,7 +65,9 @@ steps:
       cd aiml50/source
       az artifacts universal publish \
         --organization "https://dev.azure.com/$(org_name)/" \
-        --feed "SeerPackages" \
+        --project="AIML50" \
+        --scope project \
+        --feed "MITT" \
         --name "seer_deployment" \
         --version "$(Build.BuildNumber)" \
         --description "Seer files" \
