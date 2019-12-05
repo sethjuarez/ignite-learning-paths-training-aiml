@@ -1,225 +1,183 @@
-import azureml
-from azureml.core import VERSION
-from azureml.core import Workspace, Experiment, Datastore, Environment
-from azureml.core.runconfig import RunConfiguration
+import argparse
+from azureml.core import Workspace, Experiment, Datastore
 from azureml.data.datapath import DataPath, DataPathComputeBinding
 from azureml.data.data_reference import DataReference
 from azureml.core.compute import ComputeTarget, AmlCompute
-from azureml.core.compute_target import ComputeTargetException
-from azureml.pipeline.core import Pipeline, PipelineData, PipelineParameter, PipelineEndpoint
+from azureml.pipeline.core import Pipeline, PipelineData, PipelineParameter, PublishedPipeline, PipelineEndpoint
 from azureml.pipeline.steps import PythonScriptStep, EstimatorStep
 from azureml.train.estimator import Estimator
-import sys, getopt, os
 
-## Get arguments
-def printhelp():
-        print ('Arguments:')
-        print ('  -d    Data Store name')
-        print ('  -p    Data Store Path')
-        print ('  -c    Compute Target name')
-        print ('  -v    Universal Package version (for deployment and inferencing code)')
-        print ('  -s    Azure Subscription id')
-        print ('  -a    Storage Account name')
-        print ('  -k    Storage Account key')
-        print ('  -r    Resource Group name')
-        print ('  -w    Machine Learning workspace name')
+##############################################################
+#    Get Azure Machine Learning Resources                    #
+##############################################################
+def get_workspace(workspace: str, subscription: str, resource_group: str) -> Workspace:
+    return Workspace.get(name=workspace, 
+                         subscription_id=subscription, 
+                         resource_group=resource_group)
 
-datastorename=''
-datastorepath=''
-computetarget=''
-packageversion=''
-workspace_name=''
-subscription_id=''
-resource_group=''
-storage_account=''
-storage_account_key=''
-
-try:
-    print('Arguments: ', sys.argv[1:])
-    opts, args = getopt.getopt(sys.argv[1:],"d:p:c:v:s:a:k:r:w:")
-except getopt.GetoptError:
-    printhelp
-for opt, arg in opts:
-    if opt == '-h':
-        printhelp
-    elif opt == '-d':
-        datastorename = arg
-    elif opt == '-p':
-        datastorepath = arg
-    elif opt == '-c':
-        computetarget = arg
-    elif opt == '-v':
-        packageversion = arg
-    elif opt == '-s':
-        subscription_id = arg
-    elif opt == '-a':
-        storage_account = arg
-    elif opt == '-k':
-        storage_account_key = arg
-    elif opt == '-r':
-        resource_group = arg
-    elif opt == '-w':
-        workspace_name = arg
-
-print("Azure ML SDK Version: ", VERSION)
-
-#### Connect to our workspace ####
-##################################
-
-# workspace
-ws = Workspace.get( name=workspace_name, 
-                    subscription_id=subscription_id, 
-                    resource_group=resource_group)
-
-# data
-ds = Datastore.register_azure_blob_container(workspace=ws, 
-                                            datastore_name=datastorename, 
-                                            container_name='seer-container',
-                                            account_name=storage_account, 
-                                            account_key=storage_account_key,
+def get_datastore(ws: Workspace, datastore_name: str, container: str, account_name: str, account_key: str) -> Datastore:
+    if not datastore_name in ws.datastores:
+        Datastore.register_azure_blob_container(workspace=ws, 
+                                            datastore_name=datastore_name, 
+                                            container_name=container,
+                                            account_name=account_name, 
+                                            account_key=account_key,
                                             create_if_not_exists=True)
-datastore = ws.datastores[datastorename]
+        
+    return ws.datastores[datastore_name]
 
-# compute target
-try:
-    cpu_cluster = ComputeTarget(workspace=ws, name=computetarget)
-    print('Found existing cluster, use it.')
-except ComputeTargetException:
-    compute_config = AmlCompute.provisioning_configuration(vm_size='STANDARD_NC12',
-                                                           min_nodes=1, 
-                                                           max_nodes=4)
-    cpu_cluster = ComputeTarget.create(ws, computetarget, compute_config)
+def get_compute(ws: Workspace, compute_target: str) -> ComputeTarget:
+    if not compute_target in ws.compute_targets:
+        compute_config = AmlCompute.provisioning_configuration(vm_size='STANDARD_NC6', min_nodes=1, max_nodes=4)
+        cluster = ComputeTarget.create(ws, compute_target, compute_config)
+        cluster.wait_for_completion(show_output=True)
 
-cpu_cluster.wait_for_completion(show_output=True)
+    return ws.compute_targets[compute_target]
 
-compute = ws.compute_targets[computetarget]
+##############################################################
+#    Create Pipeline Steps                                   #
+##############################################################
 
+# data process step
+def process_step(datastore: Datastore, compute: ComputeTarget, path_on_datastore: str) -> (PipelineData, EstimatorStep):
+    datapath = DataPath(datastore=datastore, path_on_datastore=path_on_datastore)
+    data_path_pipeline_param = (PipelineParameter(name="data", default_value=datapath), DataPathComputeBinding(mode='mount'))
 
-#### Define Pipeline! ####
-##########################
+    seer_tfrecords = PipelineData(
+        "tfrecords_set",
+        datastore=datastore,
+        is_directory=True
+    )
 
-# The following will be created and then run:
-# 1. Pipeline Parameters
-# 2. Data Process Step
-# 3. Training Step
-# 4. Model Registration Step
-# 5. Pipeline registration
-# 6. Submit the pipeline for execution
+    prep = Estimator(source_directory='.',
+                        compute_target=compute,
+                        entry_script='prep.py',
+                        pip_requirements_file='requirements.txt')
 
+    prepStep = EstimatorStep(
+        name='Data Preparation',
+        estimator=prep,
+        estimator_entry_script_arguments=["--source_path", data_path_pipeline_param, 
+                                          "--target_path", seer_tfrecords],
+        inputs=[data_path_pipeline_param],
+        outputs=[seer_tfrecords],
+        compute_target=compute
+    )
 
-## Pipeline Parameters ##
-# We need to tell the Pipeline what it needs to learn to see!
+    return seer_tfrecords, prepStep
 
-datapath = DataPath(datastore=datastore, path_on_datastore=datastorepath)
-data_path_pipeline_param = (PipelineParameter(name="data", 
-                                            default_value=datapath), 
-                                            DataPathComputeBinding(mode='mount'))
+def train_step(datastore: Datastore, input_data: PipelineData, compute: ComputeTarget) -> (PipelineData, EstimatorStep):
+    seer_training = PipelineData(
+        "train",
+        datastore=datastore,
+        is_directory=True
+    )
 
-# Configuration for data prep and training steps #
+    train = Estimator(source_directory='.',
+                        compute_target=compute,
+                        entry_script='train.py',
+                        use_gpu=True,
+                        pip_requirements_file='requirements.txt')
 
-dataprepEnvironment = Environment.from_pip_requirements('dataprepenv', 'requirements-dataprepandtraining.txt')
-dataprepRunConfig = RunConfiguration()
-dataprepRunConfig.environment = dataprepEnvironment
+    trainStep = EstimatorStep(
+        name='Model Training',
+        estimator=train,
+        estimator_entry_script_arguments=["--source_path", input_data, 
+                                        "--target_path", seer_training,
+                                        "--epochs", 15,
+                                        "--batch", 10,
+                                        "--lr", 0.001],
+        inputs=[input_data],
+        outputs=[seer_training],
+        compute_target=compute
+    )
 
-## Data Process Step ##
-# parse.py file parses the images in our data source #
+    return seer_training, trainStep
 
-seer_tfrecords = PipelineData(
-    "tfrecords_set",
-    datastore=datastore,
-    is_directory=True
-)
+def register_step(datastore: Datastore, input_data: PipelineData, compute: ComputeTarget, package_version: str) -> (PipelineData, EstimatorStep):
+    seer_model = PipelineData(
+        "model",
+        datastore=datastore,
+        is_directory=True
+    )
 
-prepStep = PythonScriptStep(
-    'parse.py',
-    source_directory='.',
-    name='Data Preparation',
-    compute_target=compute,
-    arguments=["--source_path", data_path_pipeline_param, "--target_path", seer_tfrecords],
-    runconfig=dataprepRunConfig,
-    inputs=[data_path_pipeline_param],
-    outputs=[seer_tfrecords]
-)
+    register = Estimator(source_directory='.',
+                        compute_target=compute,
+                        entry_script='register.py')
 
-## Training Step ##
-# train.py does the training based on the processed data #
+    registerStep = EstimatorStep(
+        name='Model Registration',
+        estimator=register,
+        estimator_entry_script_arguments=["--source_path", input_data, 
+                                          "--target_path", seer_model,
+                                          "--universal_package_version", package_version],
+        inputs=[input_data],
+        outputs=[seer_model],
+        compute_target=compute
+    )
 
-seer_training = PipelineData(
-    "train",
-    datastore=datastore,
-    is_directory=True
-)
+    return seer_model, registerStep
 
-train = Estimator(source_directory='.',
-                    compute_target=compute,
-                    entry_script='train.py',
-                    pip_requirements_file='requirements-dataprepandtraining.txt')
+##############################################################
+#    Manage Endpoint                                         #
+##############################################################
+def add_endpoint(ws: Workspace, pipeline: PublishedPipeline, endpoint_name: str) -> PipelineEndpoint:
+    endpoint_list = [p.name for p in PipelineEndpoint.list(ws)]
+    endpoint = None
+    # endpoint does not exist so add
+    if endpoint_name in endpoint_list:
+        endpoint = PipelineEndpoint.get(workspace=ws, name=endpoint_name)
+        endpoint.add_default(published_pipeline)
+    else:
+        endpoint = PipelineEndpoint.publish(workspace=ws, name=endpoint_name,
+                                                pipeline=published_pipeline, description="Seer Pipeline Endpoint")
+    return endpoint
 
-trainStep = EstimatorStep(
-    name='Model Training',
-    estimator=train,
-    estimator_entry_script_arguments=["--source_path", seer_tfrecords, 
-                                    "--target_path", seer_training,
-                                    "--epochs", 20,
-                                    "--batch", 10,
-                                    "--lr", 0.001],
-    inputs=[seer_tfrecords],
-    outputs=[seer_training],
-    compute_target=compute
-)
+##############################################################
+#    Main Run                                                #
+##############################################################
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Seer Pipeline')
+    parser.add_argument('-d', '--datastore_name', help='Data Store name')
+    parser.add_argument('-p', '--datastore_path', help='Data Store Path')
+    parser.add_argument('-c', '--compute_target', help='Compute Target name')
+    parser.add_argument('-v', '--universal_package', help='Universal Package version (for deployment and inferencing code)')
+    parser.add_argument('-s', '--subscription', help='Azure Subscription id')
+    parser.add_argument('-a', '--storage_account', help='Storage Account name')
+    parser.add_argument('-k', '--storage_key', help='Storage Account key')
+    parser.add_argument('-r', '--resource_group', help='Resource Group name')
+    parser.add_argument('-w', '--workspace', help='Machine Learning workspace name')
 
+    args = parser.parse_args()
 
-## Register Model Step ##
-# Once training is complete, register.py registers the model with AML #
+    # get aml workspace
+    ws = get_workspace(args.workspace, args.subscription, args.resource_group)
 
-# Configuration for registration step #
-registerEnvironment = Environment.from_pip_requirements('registerenv', 'requirements-registration.txt')
-registerRunConfig = RunConfiguration()
-registerRunConfig.environment = registerEnvironment
+    # get datastore
+    datastore = get_datastore(ws, args.datastore_name, 'seer', args.storage_account, args.storage_key)
 
-seer_model = PipelineData(
-    "model",
-    datastore=datastore,
-    is_directory=True
-)
+    # get compute
+    compute = get_compute(ws, args.compute_target)
 
-registerStep = PythonScriptStep(
-    'register.py',
-    source_directory='.',
-    name='Model Registration',
-    arguments=["--source_path", seer_training, 
-               "--target_path", seer_model,
-               "--universal_package_version", packageversion],
-    inputs=[seer_training],
-    outputs=[seer_model],
-    compute_target=compute,
-    runconfig=registerRunConfig
-)
+    # prep step
+    pdata, pstep = process_step(datastore, compute, args.datastore_path)
 
-## Create and publish the Pipeline ##
-# We now define and publish the pipeline #
+    # train step
+    tdata, tstep = train_step(datastore, pdata, compute)
 
-pipeline = Pipeline(workspace=ws, steps=[prepStep, trainStep, registerStep])
+    # register step (tag model with version)
+    rdata, rstep = register_step(datastore, tdata, compute, args.universal_package)
 
-published_pipeline = pipeline.publish(
-    name="Seer Pipeline", 
-    description="Transfer learned image classifier. Uses folders as labels.")
+    # create pipeline from steps
+    seer_pipeline = Pipeline(workspace=ws, steps=[pstep, tstep, rstep])
+    published_pipeline = seer_pipeline.publish(name="Seer Pipeline", 
+        description="Transfer learned image classifier. Uses folders as labels.")
 
-## Create Pipeline Endpoint ##
-# Check if endpoint exists, otherwise create new one #
-endpoint_name = "seer-endpoint"
-endpoint_list = [p.name for p in PipelineEndpoint.list(ws)]
-endpoint = None
-# endpoint does not exist so add
-if endpoint_name in endpoint_list:
-    endpoint = PipelineEndpoint.get(workspace=ws, name=endpoint_name)
-    endpoint.add_default(published_pipeline)
-else:
-    endpoint = PipelineEndpoint.publish(workspace=ws, name=endpoint_name,
-                                            pipeline=published_pipeline, description="Seer Pipeline Endpoint")
+    # add pipeline to endpoint
+    endpoint = add_endpoint(ws, published_pipeline, 'seer-endpoint')
 
-## Submit the pipeline to be run ##
-# Finally, we submit the pipeline for execution #
-pipeline_run = endpoint.submit('seer')                               
-pipeline_run.set_tags(tags={'universalPackageVersion': packageversion})
-print(f'Run created with ID: {pipeline_run.id}')
+    # run pipeline
+    pipeline_run = endpoint.submit('seer')                               
+    pipeline_run.set_tags(tags={'universalPackageVersion': args.universal_package})
+    print(f'Run created with ID: {pipeline_run.id}')
+

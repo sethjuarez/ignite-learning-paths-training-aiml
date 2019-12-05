@@ -14,7 +14,7 @@ def info(msg, char = "#", width = 75):
     print(char + "   %0*s" % ((-1*width)+5, msg) + char)
     print(char * width)
 
-def best_model(source_path, universal_package_version):
+def best_model(source_path):
     best_model = None
     maxsum = -1
     for file in Path(source_path).glob('*.hdf5'):
@@ -25,11 +25,11 @@ def best_model(source_path, universal_package_version):
         sm = ps[0] + ps[1]
         # look at train/val acc combo
         if sm > maxsum:
-            best_model = {'file': file,
+            best_model = {
+                'file': file,
                 'train': ps[0],
                 'val': ps[1],
-                'sum': ps[0] + ps[1],
-                'uver': universal_package_version
+                'sum': ps[0] + ps[1]
             }
             maxsum = sm
             
@@ -37,6 +37,13 @@ def best_model(source_path, universal_package_version):
     
 
 def main(run, source_path, target_path, universal_package_version):
+    # load previous step metadata
+    train_step = os.path.join(source_path, 'metadata.json')
+    with open(train_step) as f:
+        train = json.load(f)
+
+    for i in train:
+        print('{} => {}'.format(i, train[i]))
 
     metadata_file = 'metadata.json'
     model_file = 'model.hdf5'
@@ -44,7 +51,7 @@ def main(run, source_path, target_path, universal_package_version):
         os.makedirs(target_path)
 
     info('Model')
-    model = best_model(source_path, universal_package_version)
+    model = best_model(source_path)
     print('Best model found:')
     for i in model:
         print('   {} => {}'.format(i, model[i]))
@@ -61,8 +68,14 @@ def main(run, source_path, target_path, universal_package_version):
     # not offline - we can register in AML
     if not run.id.lower().startswith('offlinerun'):
         info('Register')
+
+        # for tagging build number associated with build
+        model['uver'] = universal_package_version
         model['file'] = original_file
-        m = Model.register(run.experiment.workspace, model_name='seer', model_path=target_path, tags=model)
+        print(f'Uploading {target_path} to run {run.id} as the "model" folder')
+
+        run.upload_folder('model', target_path)
+        m = run.register_model(model_name='seer', model_path='model', tags=model)
         print(m)
 
     print('Done!')

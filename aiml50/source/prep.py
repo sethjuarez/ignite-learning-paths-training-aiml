@@ -2,6 +2,7 @@ import os
 import csv
 import json
 import shutil
+import random
 import argparse
 import tensorflow as tf
 from pathlib import Path
@@ -53,17 +54,22 @@ def example(base_path, rel_path, labelidx, image_size=160):
 
 def main(source_path, target_path, records, image_size, force):
     info('Preprocess')
+    raw_path = Path(source_path)
 
-    fetch_step = os.path.join(source_path, 'metadata.json')
-    print('Loading {}'.format(fetch_step))
+    categories = sorted([str(p.relative_to(source_path)) for p in list(raw_path.glob('*/'))])
 
-    with open(fetch_step) as f:
-        fetch = json.load(f)
+    if len(categories) == 0:
+        raise Exception('There is no visible data to parse!')
 
-    for i in fetch:
-        print('{} => {}'.format(i, fetch[i]))
+    index = dict((name, index) for index, name in enumerate(categories))
 
-    raw_csv = os.path.join(source_path, fetch['file'])
+    images = [[str(p.relative_to(source_path)),
+               str(p.parent.relative_to(source_path)),
+               index[str(p.parent.relative_to(source_path))]] for p in list(raw_path.glob('*/*'))]
+
+    random.shuffle(images)
+    random.shuffle(images)
+    random.shuffle(images)
 
     # check for existing files on force clear
     write_path = os.path.join(target_path, 'tfrecords')
@@ -94,29 +100,28 @@ def main(source_path, target_path, records, image_size, force):
     tfrecords = []
     writer = None
     record_file = os.path.join(write_path, '{}.tfrecords')
-    with open(raw_csv, 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        for row in reader:
-            if total_records % records == 0:
-                if writer != None:
-                    writer.flush()
-                    writer.close()
-                tfrecord = record_file.format('images{}_{}'.format(total_records//records, records))
-                tfrecords.append(tfrecord)
-                info('Writing to {}'.format(tfrecord))
-                writer = tf.io.TFRecordWriter(tfrecord)
-            try:
-                print('Trying {}...'.format(row[0]), end=' ')
-                image = example(source_path, row[0], row[2], image_size)
-                writer.write(image.SerializeToString())
-                total_records += 1
-                print('Success!')
-            except Exception as e:
-                print('Error: {}'.format(e))
 
-        if writer != None:
-            writer.flush()
-            writer.close()
+    for row in images:
+        if total_records % records == 0:
+            if writer != None:
+                writer.flush()
+                writer.close()
+            tfrecord = record_file.format('images{}_{}'.format(total_records//records, records))
+            tfrecords.append(tfrecord)
+            info('Writing to {}'.format(tfrecord))
+            writer = tf.io.TFRecordWriter(tfrecord)
+        try:
+            print('Trying {}...'.format(row[0]), end=' ')
+            image = example(source_path, row[0], row[2], image_size)
+            writer.write(image.SerializeToString())
+            total_records += 1
+            print('Success!')
+        except Exception as e:
+            print('Error: {}'.format(e))
+
+    if writer != None:
+        writer.flush()
+        writer.close()
 
     info('Post process')
     
@@ -130,8 +135,8 @@ def main(source_path, target_path, records, image_size, force):
         'file': str(Path(processed_files).relative_to(target_path)),
         'image_size': image_size,
         'records': records,
-        'categories': fetch['categories'],
-        'index': fetch['index'],
+        'categories': categories,
+        'index': index,
         'generated': datetime.now().strftime('%m/%d/%y %H:%M:%S'),
         'total_records': total_records,
         'total_files': len(tfrecords)

@@ -27,7 +27,7 @@ def info(msg, char = "#", width = 75):
     print(char + "   %0*s" % ((-1*width)+5, msg) + char)
     print(char * width)
 
-def split(records, split=[7, 3]):
+def split(records, split=[8, 2]):
     # normalize splits
     splits = np.array(split) / np.sum(np.array(split))
     # split data
@@ -50,6 +50,10 @@ def parse_record(example_proto):
 
 def main(run, source_path, target_path, epochs, batch, lr):
     info('Preprocess')
+    
+    print(f'Using Tensorflow v.{tf.__version__}')
+    print(f'GPUs Available: {len(tf.config.experimental.list_physical_devices("GPU"))}')
+
     if not os.path.exists(target_path):
         os.makedirs(target_path)
 
@@ -100,9 +104,6 @@ def main(run, source_path, target_path, epochs, batch, lr):
     #                                           weights='imagenet',
     #                                           pooling='avg')
 
-    tf.keras.applications
-
-
     base_model.trainable = True
 
     model = tf.keras.Sequential([
@@ -146,6 +147,7 @@ def main(run, source_path, target_path, epochs, batch, lr):
         'categories': prep['categories'],
         'index': prep['index'],
         'generated': datetime.now().strftime('%m/%d/%y %H:%M:%S'),
+        'run': str(run.id)
     }
 
     print('Writing out metadata to {}'.format(out_file))
