@@ -16,7 +16,6 @@ def init():
 
     try:
         path = Model.get_model_path('seer')
-        time.sleep(5)
     except:
         path = 'data/model'
 
