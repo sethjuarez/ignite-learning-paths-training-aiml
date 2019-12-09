@@ -1,9 +1,8 @@
 # AIML20: Speaker Notes
 
-These are the notes for the PPT presentation at:
-https://microsoft.sharepoint.com/:p:/t/CloudDevAdvocacy/EctuTXQCOdpGqc5lhQgUnMgBr-R6hlWR5MuLE3qCIFgoHA?e=r1szwF
+These are the notes for the PPT presentation at: [presentations.md](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml20/presentations.md)
 
-Associated demo scripts are found at: https://github.com/microsoft/ignite-learning-paths/tree/master/aiml/aiml20. Start with `DEMO%20Setup.md`.
+Associated demo scripts are found at: https://github.com/microsoft/ignite-learning-paths-training-aiml/tree/master/aiml20. Start with `DEMO%20Setup.md`.
 
 ## Slide notes
 
@@ -422,7 +421,7 @@ guess what happens next: we could build a simple predictive model, like a
 logistic regression or a one-layer neural network, to predict the new object
 classifications from the features.
 
-### SLIDE: Transfer Learnng Trained Model
+### SLIDE: Transfer Learning Trained Model
 
 It turns out, this often works surprisingly well. You don't even need a lot of
 data -- a few dozen images will often do the trick, as long as the categories
@@ -450,7 +449,7 @@ Photo feature of Tailwind Traders.
 
 ### SLIDE: Demo: Customized object recognition
 
-Demo instructions: https://github.com/microsoft/ignite-learning-paths/blob/master/aiml/aiml20/DEMO%20Custom%20Vision.md
+Demo instructions: https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml20/DEMO%20Custom%20Vision.md
 
 ### VIDEO: customvision.ai
 
@@ -654,7 +653,7 @@ like, but don't know about? Personalizer is usually in Exploit mode, where it
 recommends the best activity based on history and context, but sometimes it also
 enters Explore mode, and presents the user with new things they might not
 otherwise see. It's kind of like an automated A/B testing system, but with more
-than two branches, all tested in teal time.
+than two branches, all tested in real time.
 
 You control what percentage of the time Explore Mode is
 activated, to help the user discover new content or features.
@@ -789,9 +788,9 @@ on Microsoft Learn that will take you through using them step-by-step.
 ### SLIDE: Resources
 
 To find links to Docs and Learn, and to all the resources I've mentioned in this
-talk, check out the Session Resources link on this slide. You can also run of
+talk, check out the Session Resources link on this slide. You can also run all of
 the demos I gave today yourself, using the code and scripts available in this
-github repository. And if you'd like to get a Microsoft Certificaion in AI or
+github repository. And if you'd like to get a Microsoft Certification in AI or
 Data Science, theres a special offer for a free certificate for attendees today:
 check out this link for details.
 

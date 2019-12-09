@@ -1,8 +1,18 @@
 # AIML10: Making Sense of your Unstructured Data with AI
 
-### Session Abstract
+## Session Abstract
 
 Tailwind Traders has a lot of legacy data that they’d like their developers to leverage in their apps – from various sources, both structured and unstructured, and including images, forms, pdf files, and several others. In this session, you'll learn how the team used Cognitive Search to make sense of this data in a short amount of time and with amazing success. We'll discuss tons of AI concepts, like the ingest-enrich-explore pattern, skillsets, cognitive skills, natural language processing, computer vision, and beyond.
+
+## Table of Content
+ 
+
+| Resources          | Links                            |
+|-------------------|----------------------------------|
+| PowerPoint        | - [Presentation](presentations.md) |
+| Videos            | - [Dry Run Rehearsal](https://www.youtube.com/watch?v=dm0wDTSso0E) <br/>- [Microsoft Ignite Orlando Recording](https://myignite.techcommunity.microsoft.com/sessions/82986?source=sessions) |
+| Demos             | - [Demo 1 - Azure Cognitive Search ](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml10/demo1.md) <br/>- [Demo 2 - Forms Recognizer Service](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml10/demo2.md) <br/>- [Demo 3 - Creating a Custom Invoice Reader Skill](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml10/demo3.md)<br/>- [Demo 4 - Tying it all Together](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml10/demo4.md) <br/>- [Demo 5 - Knowledge Store](https://github.com/microsoft/ignite-learning-paths-training-aiml/blob/master/aiml10/demo5.md) | 
+
 
 # Overview
 In this solution we develop a process whereby we take a set of unstructured pdf invoices and generate structured tabular output using Azure Cognitive Search with a customized Form Recognizer Skill. 
@@ -24,6 +34,11 @@ When creating this solution there are a few Azure resources ([free trial here](h
 | **readerskill**          | Function App                 | Cognitive Skill App |
 | **readerskill**          | App Insights                   | Adds insights to Function App |
 | **EastUS2LinuxDynamicPlan** | App Service Plan                   | Consumption based plan for running Function App |
+
+# Presentation
+
+* [PowerPoint Download](https://globaleventcdn.blob.core.windows.net/assets/aiml/aiml10/aiml10.pptx)
+* [Microsoft Ignite Orlando Session Video](https://myignite.techcommunity.microsoft.com/sessions/82986?source=sessions)
 
 
 # Demonstrations
@@ -56,4 +71,34 @@ This talk consisted of the 5 demonstrations listed below.
 
 # Feedback Loop
 
-Do you have a comment, feedback, suggestion? Currently, the best feedback loop for content changes/suggestions/feedback is to create a new issue on this GitHub repository. To get all the details about how to create an issue please refer to the [Contributing docs](https://github.com/microsoft/ignite-learning-paths/blob/master/contributing.md)
+Do you have a comment, feedback, suggestion? Currently, the best feedback loop for content changes/suggestions/feedback is to create a new issue on this GitHub repository. To get all the details about how to create an issue please refer to the [Contributing docs](../CONTRIBUTING.md)
+
+## Become a Trained Presenter
+
+To become a trained presenter, contact [scalablecontent@microsoft.com](mailto:scalablecontent@microsoft.com). In your email please include:
+
+- Complete name
+- The code of this presentation: aiml10
+- Link to a video of you presenting (~10 minutes in length)(ex: unlisted YouTube video). 
+  > It doesn't need to be this content, the importance is to show your presenter skills
+
+A mentor will get back to you with information on the process.
+
+## Trained Presenters
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore -->
+
+<table>
+<tr>
+    <td align="center"><a href="https://github.com/sethjuarez">
+        <img src="https://avatars2.githubusercontent.com/u/115409?s=460&v=4" width="100px;" alt="Seth Juarez"/><br />
+        <sub><b>Seth Juarez</b></sub></a><br />
+            <a href="Add link to powerpoint here" title="Talk">📢</a>
+            <a href="Add link to pull request here" title="Documentation">📖</a> 
+    </td>
+</tr></table>
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
