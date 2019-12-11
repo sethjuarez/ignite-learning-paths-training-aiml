@@ -84,9 +84,9 @@ def train_step(datastore: Datastore, input_data: PipelineData, compute: ComputeT
         estimator=train,
         estimator_entry_script_arguments=["--source_path", input_data, 
                                         "--target_path", seer_training,
-                                        "--epochs", 5,
+                                        "--epochs", 1,
                                         "--batch", 10,
-                                        "--lr", 0.001],
+                                        "--lr", 1],
         inputs=[input_data],
         outputs=[seer_training],
         compute_target=compute
