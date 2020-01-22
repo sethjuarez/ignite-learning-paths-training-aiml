@@ -2,6 +2,8 @@ import os
 import json
 from azureml.core.model import Model
 from spacy.cli.download import download as spacy_download
+import en_core_web_sm
+
 from nlp_architect.models.absa.inference.inference import SentimentInference
 
 def init():
@@ -17,7 +19,7 @@ def init():
     aspect_lex = os.path.join(path, 'generated_aspect_lex.csv')
     opinion_lex = os.path.join(path, 'generated_opinion_lex_reranked.csv')
     
-    spacy_download('en')
+    nlp = en_core_web_sm.load()
 
     SentInference = SentimentInference(aspect_lex, opinion_lex)
 
