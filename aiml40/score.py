@@ -1,10 +1,23 @@
 import os
 import json
+import time
+import spacy
+import datetime
+import subprocess
 from azureml.core.model import Model
 from spacy.cli.download import download as spacy_download
-import en_core_web_sm
-
 from nlp_architect.models.absa.inference.inference import SentimentInference
+
+def download_models():
+    print('Downloading models...')
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    ["python", "-m", "spacy", "download", "en"]
+    print('...done downloading.\nImporting and loading model.')
+    import en_core_web_sm
+    nlp = en_core_web_sm.load()
+    print(nlp)
+
+    spacy_download('en')
 
 def init():
     """
@@ -19,7 +32,7 @@ def init():
     aspect_lex = os.path.join(path, 'generated_aspect_lex.csv')
     opinion_lex = os.path.join(path, 'generated_opinion_lex_reranked.csv')
     
-    nlp = en_core_web_sm.load()
+    download_models()
 
     SentInference = SentimentInference(aspect_lex, opinion_lex)
 
@@ -27,10 +40,26 @@ def run(raw_data):
     """
     Evaluate the model and return JSON string
     """
-    sentiment_doc = SentInference.run(doc=raw_data)
-    parse = sentiment_doc.json().replace('doc_text', 'text').replace('"_', '"')
+    prev_time = time.time()
+
+    post = json.loads(raw_data)
+
+    # get text
+    doc = post['text']
+    print(f'Processing "{doc}"')
+
+    sentiment_doc = SentInference.run(doc=doc)
+    parse = sentiment_doc.json()
     print(json.dumps(json.loads(parse), indent=4))
-    return doc2IO(parse)
+
+    resp = doc2IO(parse.replace('doc_text', 'text').replace('"_', '"'))
+
+    current_time = time.time()
+    inference_time = datetime.timedelta(seconds=current_time - prev_time)
+
+    resp['time'] = str(inference_time.total_seconds())
+
+    return resp
 
 def doc2IO(doc):
     """
@@ -56,14 +85,14 @@ def doc2IO(doc):
     return doc_json
 
 if __name__ == '__main__':
-    import pprint
     init()
 
-    docs = ["Loved the sweater but hated the pants",
-        "Really great outfit, but the shirt is the wrong size",
-        "I absolutely love this jacket! i wear it almost everyday. works as a cardigan or a jacket. my favorite retailer purchase so far"]
+    docs = ["Loved the sweater but hated the pants"]
+        #,
+        #"Really great outfit, but the shirt is the wrong size",
+        #"I absolutely love this jacket! i wear it almost everyday. works as a cardigan or a jacket. my favorite retailer purchase so far"]
 
     for d in docs:
         print(f'\n---------------------\n{d}')
-        r = run(d)
+        r = run(json.dumps({'text': d}))
         print(json.dumps(r, indent=4))

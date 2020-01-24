@@ -1,7 +1,7 @@
-import argparse
 import json
 import os 
 import shutil
+import argparse
 from pathlib import Path
 from nltk import flatten
 from azureml.core import Run
@@ -18,6 +18,7 @@ parser.add_argument('--data_folder', type=str, dest='data_folder', help='data fo
 parser.add_argument('--asp_thresh', type=int, default=3)
 parser.add_argument('--op_thresh', type=int, default=2)
 parser.add_argument('--max_iter', type=int, default=3)
+parser.add_argument('--large', type=str, default="no")
 
 args = parser.parse_args()
 
@@ -35,6 +36,13 @@ EMBEDDING_PATH = TRAIN_OUT / 'word_emb_unzipped' / 'glove.840B.300d.txt'
 uncompress_file(GLOVE_ZIP, Path(EMBEDDING_PATH).parent)
 
 clothing_train = os.path.join(args.data_folder, 'clothing_data/clothing_absa_train_small.csv')
+
+if args.large == 'yes':
+    print(f'Using large dataset: clothing_data/clothing_absa_train.csv')
+    clothing_train = os.path.join(args.data_folder, 'clothing_data/clothing_absa_train.csv')
+else:
+    print(f'Using small dataset: clothing_data/clothing_absa_train_small.csv')
+    clothing_train = os.path.join(args.data_folder, 'clothing_data/clothing_absa_train_small.csv')
 
 os.makedirs('outputs', exist_ok=True)
 

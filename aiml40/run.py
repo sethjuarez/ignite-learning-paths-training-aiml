@@ -6,10 +6,6 @@ from azureml.core.compute_target import ComputeTargetException
 from azureml.core.model import InferenceConfig
 from azureml.core.webservice import AciWebservice
 
-
-
-
-
 def main():
     # get access to workspace
     try:
@@ -27,16 +23,17 @@ def main():
     # deploy model
     
 
-    pip = ["azureml-defaults", "azureml-monitoring", 
-        "git+https://github.com/NervanaSystems/nlp-architect.git@absa", 
-        "spacy"]
+    pip = ["azureml-defaults", 
+            "azureml-monitoring", 
+            "git+https://github.com/NervanaSystems/nlp-architect.git@absa", 
+            "spacy==2.1.4"]
 
     myenv = CondaDependencies.create(pip_packages=pip)
 
-    with open("myenv.yml","w") as f:
+    with open("absaenv.yml","w") as f:
         f.write(myenv.serialize_to_string())
 
-    deploy_env = Environment.from_conda_specification('absa_env', "myenv.yml")
+    deploy_env = Environment.from_conda_specification('absa_env', "absaenv.yml")
     deploy_env.environment_variables={'NLP_ARCHITECT_BE': 'CPU'}
 
 

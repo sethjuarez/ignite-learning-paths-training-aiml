@@ -1,0 +1,1 @@
+az ml model deploy -m absa:2 --name absa-local --ic inferenceconfig.json --dc localdeployconfig.json --overwrite
