@@ -44,16 +44,17 @@ else:
     print(f'Using small dataset: clothing_data/clothing_absa_train_small.csv')
     clothing_train = os.path.join(args.data_folder, 'clothing_data/clothing_absa_train_small.csv')
 
-os.makedirs('outputs', exist_ok=True)
+
 
 train = TrainSentiment(asp_thresh=args.asp_thresh,
                        op_thresh=args.op_thresh, 
                        max_iter=args.max_iter)
 
-opinion_lex, aspect_lex = train.run(data=clothing_train,
-                                    out_dir = './outputs')
+os.makedirs('trainingrun', exist_ok=True)
+opinion_lex, aspect_lex = train.run(data=clothing_train, out_dir = './trainingrun')
 
 #Copy lexicons to outputs folder
+os.makedirs('outputs', exist_ok=True)
 asp_lex = shutil.copy(LEXICONS_OUT / 'generated_aspect_lex.csv', './outputs')
 op_lex = shutil.copy(LEXICONS_OUT / 'generated_opinion_lex_reranked.csv', './outputs')
 
